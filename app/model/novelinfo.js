@@ -12,11 +12,6 @@ module.exports = app => {
         img: { type: String  },
         url: { type: String  },
         tag: { type: String  },
-        list: [{
-            id: Number,
-            title: String,
-            href: String
-        }]
     }, { versionKey: false });
     
     return mongoose.model('novelInfo', novelInfo);

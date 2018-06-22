@@ -15,7 +15,9 @@ class NovelinfoService extends Service {
     
     async bookchapter(params) {
         const { ctx } = this;
-        const result = await ctx.model.Novelinfo.find({code: params.id},{title: 1, code: 1, author: 1, tag: 1, description: 1, list: 1});
+        const tag = await ctx.model.Novelinfo.findOne({code: params.id},{tag: 1})
+        const collection = ctx.service.crawel.categoryDb(tag.tag)
+        const result = await ctx.model[collection].find({code: params.id}).sort({order: 1})
         return result;
     }
     

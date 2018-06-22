@@ -9,8 +9,20 @@ module.exports = appInfo => {
   config.middleware = [ 'errorHandler' ];
   
   config.mongoose = {
-    url: 'mongodb://127.0.0.1:27017/book',
+    url: 'mongodb://127.0.0.1:27017/novel',
     options: {}
+  }
+  
+  config.security= {
+      csrf: {
+          enable: false,
+          ignoreJSON: true
+      },
+      domainWhiteList: ['http://localhost:8080']
+  }
+  config.cors= {
+      allowMethods: 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
+      credentials: true
   }
 
   return config;
