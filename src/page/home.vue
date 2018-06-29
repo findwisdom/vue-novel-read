@@ -18,7 +18,7 @@ export default {
         }
     },
     created () {
-        let url = 'http://localhost:7001/api/booklist'
+        let url = 'http://47.98.221.113:7001/api/booklist'
         let _self = this
         axios.get(url)
             .then(function (response) {

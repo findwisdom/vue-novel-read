@@ -1,6 +1,19 @@
 <template>
     <div id="reader">
         <!--<div class="button-click" @click="configShow"></div>-->
+        <div class="button-header" v-show="configVisible">
+            <div class="button-header-wrap">
+                <div class="set-header-item-1" @click="getBack">
+                    <i class="cubeic-back"></i>
+                </div>
+                <div class="set-header-item-3">
+                    {{$route.query.code}}
+                </div>
+                <div class="set-header-item-1">
+                    <i class="cubeic-person"></i>
+                </div>
+            </div>
+        </div>
         <div class="button-buttom" v-show="configVisible">
             <ul class="set-item-wrap">
                 <li class="set-item" @click="chapterShow">
@@ -26,15 +39,42 @@
             </ul>
         </div>
         <!--<cube-button @click="showContents" style="position: absolute;top: 0;z-index: 4">Show Drawer</cube-button>-->
+        <div class="read-detail-header">
+            {{titleText}}
+        </div>
         <div class="read-detail-wrap" @click="configShow">
-            <div class="read-detail">
-                <template v-for="(item, index) in items">
-                    <section :key="index" class="read-detail-chapter">
+            <cube-scroll
+                    ref="scroll"
+                    :data="items"
+                    :options="options"
+                    @pulling-down="pulling">
+                <slot>
+                    <div class="read-detail">
+                        <template v-for="(item, index) in items">
+                        <section :key="index" class="read-detail-chapter">
                         <div v-html="item" class="read-text-style"></div>
                         <cube-button  v-if="index===items.length - 1" @click.stop="nextChapter" class="read-button">加载下一章</cube-button>
-                    </section>
-                </template>
-            </div>
+                        </section>
+                        </template>
+                    </div>
+                </slot>
+            </cube-scroll>
+            <!--<cube-index-list :data="items">-->
+                <!--<cube-index-list-item-->
+                        <!--v-for="(item, index) in items"-->
+                        <!--:key="index"-->
+                        <!--:item="item">-->
+                    <!--<div class="custom-item">我是自定义 {{item}}</div>-->
+                <!--</cube-index-list-item>-->
+            <!--</cube-index-list>-->
+            <!--<div class="read-detail">-->
+                <!--<template v-for="(item, index) in items">-->
+                    <!--<section :key="index" class="read-detail-chapter">-->
+                        <!--<div v-html="item" class="read-text-style"></div>-->
+                        <!--<cube-button  v-if="index===items.length - 1" @click.stop="nextChapter" class="read-button">加载下一章</cube-button>-->
+                    <!--</section>-->
+                <!--</template>-->
+            <!--</div>-->
         </div>
         <transition name="fade">
             <div class="contents" v-show="isVisible" @click="hideContents">
@@ -62,52 +102,90 @@
 </template>
 
 <script>
-
 import axios from 'axios'
 export default {
     name: 'reader',
     data () {
         return {
-            isVisible: true, // 目录是否显示
+            isVisible: false, // 目录是否显示
             configVisible: false,
             configRead: false,
             clickVisible: true,
             title: '',
             content: [],
-            currentItem: 0,
             items: [],
-            selectedIndex: 0
+            selectedIndex: 0,
+            options: {
+                scrollbar: {
+                    fade: false
+                },
+                pullDownRefresh: {
+                    threshold: 90,
+                    stop: 40,
+                    txt: 'Refresh success'
+                }
+            }
+        }
+    },
+    computed: {
+        titleText () {
+            if (this.content.length === 0) {
+                return ''
+            } else {
+                console.log(this.content[this.selectedIndex])
+                return this.content[this.selectedIndex].title
+            }
         }
     },
     created () {
+        window.addEventListener('mousewheel', (e) => {
+            if (e.deltaY === 1) {
+                e.preventDefault()
+            }
+        })
         let _self = this
-        let url = `http://127.0.0.1:7001/api/booklist/${this.$route.query.code}`
+        let url = `http://47.98.221.113:7001/api/booklist/${this.$route.query.code}`
         axios.get(url)
             .then(function (response) {
                 _self.content = response.data
-                console.log(_self.content)
                 // _self.title = response.data.title
+                let url = `http://47.98.221.113:7001/api/bookread?href=${response.data[0].href}`
+                axios.get(url)
+                    .then(function (response) {
+                        _self.selectedIndex = 0
+                        _self.$nextTick(function () {
+                            _self.items = [response.data]
+                        })
+                        // _self.hideContents()
+                    })
+                    .catch(function (error) {
+                        console.log(error)
+                    })
             })
             .catch(function (error) {
                 console.log(error)
             })
     },
     mounted () {
-        window.addEventListener('mousewheel', (e) => {
-            if (e.deltaY === 1) {
-                e.preventDefault()
-            }
-        })
     },
     methods: {
+        getBack () {
+            this.$router.push(-1)
+        },
+        pulling () {
+            console.log(11111111111)
+            this.nextChapter()
+            this.$refs.scroll.forceUpdate()
+        },
         selectItem (item, index) {
             let _self = this
-            let url = `http://127.0.0.1:7001/api/bookread?href=${item.href}`
+            let url = `http://47.98.221.113:7001/api/bookread?href=${item.href}`
             axios.get(url)
                 .then(function (response) {
                     _self.selectedIndex = index
-                    _self.items = [response.data]
                     _self.hideContents()
+                    _self.items = [response.data]
+                    // _self.hideContents()
                 })
                 .catch(function (error) {
                     console.log(error)
@@ -118,7 +196,7 @@ export default {
             let _self = this
             _self.selectedIndex = _self.selectedIndex + 1
             let href = _self.content[_self.selectedIndex].href
-            let url = `http://127.0.0.1:7001/api/bookread?href=${href}`
+            let url = `http://47.98.221.113:7001/api/bookread?href=${href}`
             axios.get(url)
                 .then(function (response) {
                     _self.items.push(response.data)
@@ -159,25 +237,61 @@ export default {
 }
 </script>
 
-<style lang="stylus" rel="stylesheet/stylus" scoped>
+<style lang="stylus" rel="stylesheet/stylus">
 #reader
     height: 100vh
     width: 100vw
     background: url(../../static/image/skin-default-t.ece62.jpg) no-repeat center top,url(../../static/image/skin-default-b.79f06.jpg) no-repeat center bottom,url(../../static/image/skin-default-m.35905.jpg) repeat-y center 119px
     background-size: 100%
     color: #000000
-
-
-
 /*内容阅读样式    */
+.read-detail-header
+    padding: 0 10px
+    font-size: 12px
+    text-align left
+    line-height: 44px
+    height: 44px
+    position: absolute
+    z-index: 4
+    top: 0
+    right: 0
+    left: 0
+    overflow: hidden
 .read-detail-wrap
     position: absolute
     z-index: 2
-    top: 60px
+    top: 50px
     right: 0
     bottom: 0
     left: 0
-    overflow: auto
+    overflow: hidden
+    /*overflow: auto*/
+    /*overflow-y:scroll*/
+    /*-webkit-overflow-scrolling: touch*/
+/*.read-detail-wrap::-webkit-scrollbar-track-piece
+    background-color: rgba(0, 0, 0, 0)
+    border-left: 1px solid rgba(0, 0, 0, 0)
+.read-detail-wrap::-webkit-scrollbar
+    width: 5px
+    height: 13px
+    -webkit-border-radius: 5px
+    -moz-border-radius: 5px
+    border-radius: 5px
+.read-detail-wrap::-webkit-scrollbar-thumb
+    background-color: rgba(0, 0, 0, 0.5)
+    background-clip: padding-box
+    -webkit-border-radius: 5px
+    -moz-border-radius: 5px
+    border-radius: 5px
+    min-height: 28px
+.read-detail-wrap::-webkit-scrollbar-thumb:hover
+    background-color: rgba(0, 0, 0, 0.5)
+    -webkit-border-radius: 5px
+    -moz-border-radius: 5px
+    border-radius: 5px
+ */
+.cube-scroll-wrapper
+    height: 100%
 .read-detail
     padding 0 12px
 .read-detail-chapter
@@ -293,9 +407,34 @@ contents-wrap-sub
     bottom: 0
     opacity:0.8
     height 48px
-.set-item-wrap{
+.button-header
+    overflow hidden
+    z-index 30
+    color: #ffffff
+    position: absolute
+    background: black
+    top: 0
+    right: 0
+    left: 0
+    opacity:0.8
+    height 48px
+.button-header-wrap
     display: flex
-}
+.set-header-item-1
+    flex: 1
+    padding 5px 0
+    height:38px
+    line-height 38px
+    text-align:center
+.set-header-item-3
+    flex: 3
+    padding 5px 0
+    height:38px
+    line-height 38px
+    text-align:center
+.set-item-wrap
+    display: flex
+
 .set-item
     height:38px
     padding 5px 0
