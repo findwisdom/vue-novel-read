@@ -47,7 +47,7 @@
                     ref="scroll"
                     :data="items"
                     :options="options"
-                    @pulling-down="pulling">
+                    @pulling-up="pullUp">
                 <slot>
                     <div class="read-detail">
                         <template v-for="(item, index) in items">
@@ -82,15 +82,19 @@
                     <div class="contents-main"  @click.stop @transitionend="transitionend" v-show="isVisible" >
                         <div class="contents-title">目录</div>
                         <div class="contents-wrap" ref="contentsmain">
-                            <div class="contents-wrap-sub">
-                                <ul>
-                                    <template v-for="(item, index) in content">
-                                        <li class="contents-chapter d_jump" @click="selectItem(item, index)" :key="index" :class="selectedIndex===index?'read-select-active':''">
-                                            {{item.title}}
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
+                            <cube-scroll
+                                    ref="content"
+                                    :data="content">
+                                <slot>
+                                    <ul>
+                                        <template v-for="(item, index) in content">
+                                            <li class="contents-chapter d_jump" @click="selectItem(item, index)" :key="index" :class="selectedIndex===index?'read-select-active':''">
+                                                {{item.title}}
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </slot>
+                            </cube-scroll>
                         </div>
                     </div>
                 </transition>
@@ -119,10 +123,12 @@ export default {
                 scrollbar: {
                     fade: false
                 },
-                pullDownRefresh: {
-                    threshold: 90,
-                    stop: 40,
-                    txt: 'Refresh success'
+                pullUpLoad: {
+                    threshold: 100,
+                    txt: {
+                        more: '加载下一章',
+                        noMore: '没有下一张了'
+                    }
                 }
             }
         }
@@ -144,18 +150,16 @@ export default {
             }
         })
         let _self = this
-        let url = `http://47.98.221.113:7001/api/booklist/${this.$route.query.code}`
+        let url = `${this.$url}/api/booklist/${this.$route.query.code}`
         axios.get(url)
             .then(function (response) {
                 _self.content = response.data
                 // _self.title = response.data.title
-                let url = `http://47.98.221.113:7001/api/bookread?href=${response.data[0].href}`
+                let url = `${_self.$url}/api/bookread?href=${response.data[0].href}`
                 axios.get(url)
                     .then(function (response) {
                         _self.selectedIndex = 0
-                        _self.$nextTick(function () {
-                            _self.items = [response.data]
-                        })
+                        _self.items = [response.data]
                         // _self.hideContents()
                     })
                     .catch(function (error) {
@@ -167,24 +171,37 @@ export default {
             })
     },
     mounted () {
+        this.$nextTick(function () {
+            this.$refs.scroll.refresh()
+        })
     },
     methods: {
         getBack () {
-            this.$router.push(-1)
+            this.$router.push({path: '/'})
         },
-        pulling () {
-            console.log(11111111111)
-            this.nextChapter()
-            this.$refs.scroll.forceUpdate()
+        pullDown () {
+            console.log('pullDown')
+            // this.nextChapter()
+            // this.$refs.scroll.forceUpdate()
+        },
+        async pullUp () {
+            await this.nextChapter()
+            this.$nextTick(function () {
+                this.$refs.scroll.forceUpdate()
+            })
+            // this.$refs.scroll.forceUpdate()
         },
         selectItem (item, index) {
             let _self = this
-            let url = `http://47.98.221.113:7001/api/bookread?href=${item.href}`
+            let url = `${this.$url}/api/bookread?href=${item.href}`
             axios.get(url)
                 .then(function (response) {
                     _self.selectedIndex = index
                     _self.hideContents()
                     _self.items = [response.data]
+                    _self.$nextTick(function () {
+                        this.$refs.scroll.scrollTo(0)
+                    })
                     // _self.hideContents()
                 })
                 .catch(function (error) {
@@ -196,7 +213,7 @@ export default {
             let _self = this
             _self.selectedIndex = _self.selectedIndex + 1
             let href = _self.content[_self.selectedIndex].href
-            let url = `http://47.98.221.113:7001/api/bookread?href=${href}`
+            let url = `${this.$url}/api/bookread?href=${href}`
             axios.get(url)
                 .then(function (response) {
                     _self.items.push(response.data)
@@ -207,9 +224,7 @@ export default {
         },
         showContents () {
             this.isVisible = true
-            this.$nextTick(function () {
-                this.jump(this.selectedIndex)
-            })
+            this.jump()
         },
         hideContents () {
             this.isVisible = false
@@ -222,9 +237,9 @@ export default {
             // 获取需要滚动的距离
             let total = jump[index].offsetTop - 80
             // Chrome
-            this.$refs.contentsmain.scrollTop = total
+            this.$refs.content.scrollTo(total)
             // Firefox
-            this.$refs.contentsmain.scrollTop = total
+            this.$refs.content.scrollTo(total)
         },
         configShow () {
             this.configVisible = !this.configVisible
@@ -232,6 +247,10 @@ export default {
         chapterShow () {
             this.configVisible = false
             this.isVisible = !this.isVisible
+            console.log(this.$refs.content)
+            this.$nextTick(function () {
+                this.$refs.content.refresh()
+            })
         }
     }
 }
@@ -239,18 +258,21 @@ export default {
 
 <style lang="stylus" rel="stylesheet/stylus">
 #reader
-    height: 100vh
-    width: 100vw
+    position fixed
+    top: 0
+    right 0
+    left 0
+    bottom 0
     background: url(../../static/image/skin-default-t.ece62.jpg) no-repeat center top,url(../../static/image/skin-default-b.79f06.jpg) no-repeat center bottom,url(../../static/image/skin-default-m.35905.jpg) repeat-y center 119px
     background-size: 100%
     color: #000000
 /*内容阅读样式    */
 .read-detail-header
     padding: 0 10px
-    font-size: 12px
+    font-size: 14px
     text-align left
-    line-height: 44px
-    height: 44px
+    line-height: 40px
+    height: 40px
     position: absolute
     z-index: 4
     top: 0
@@ -260,7 +282,7 @@ export default {
 .read-detail-wrap
     position: absolute
     z-index: 2
-    top: 50px
+    top: 40px
     right: 0
     bottom: 0
     left: 0
@@ -290,8 +312,6 @@ export default {
     -moz-border-radius: 5px
     border-radius: 5px
  */
-.cube-scroll-wrapper
-    height: 100%
 .read-detail
     padding 0 12px
 .read-detail-chapter
@@ -349,7 +369,7 @@ export default {
     line-height 43px
     height 43px
 .contents-wrap
-    position: absolute
+    position: fixed
     top: 44px
     left: 0
     bottom: 0
@@ -357,9 +377,7 @@ export default {
     width: 80vw
     display: flex
     flex-direction: column
-    overflow: auto
-contents-wrap-sub
-    overflow: auto
+    overflow: hidden
 .fade-enter-active, .fade-leave-active
     transition: opacity .3s ease-in-out
 .fade-enter, .fade-leave-to
@@ -429,8 +447,8 @@ contents-wrap-sub
 .set-header-item-3
     flex: 3
     padding 5px 0
-    height:38px
-    line-height 38px
+    height:44px
+    line-height 44px
     text-align:center
 .set-item-wrap
     display: flex

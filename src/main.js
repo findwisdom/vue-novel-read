@@ -67,6 +67,8 @@ Vue.use(Upload)
 
 Vue.config.productionTip = false
 
+Vue.prototype.$url = 'http://47.98.221.113:7001'
+
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
