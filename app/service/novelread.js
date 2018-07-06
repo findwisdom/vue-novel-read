@@ -13,6 +13,7 @@ class NovelreadService extends Service {
     
     async bookread(params) {
         const { ctx } = this;
+        
         let data = fs.readFileSync(serverFile + '/' + params.href + '.txt','utf-8')
         return data
     }
